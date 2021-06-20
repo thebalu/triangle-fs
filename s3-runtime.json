@@ -1,0 +1,73 @@
+{
+  "target": "bmv2",
+  "p4info": "build/basic_tunnel.p4.p4info.txt",
+  "bmv2_json": "build/basic_tunnel.json",
+  "table_entries": [
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.1.1", 32]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:01:00",
+        "port": 2
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.2.2", 32]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:02:00",
+        "port": 3
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.3.3", 32]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:03:33",
+        "port": 1
+      }
+    },
+
+     {
+      "table": "MyIngress.triangle_exact",
+      "match": {
+        "hdr.triangle.dst_id": [1]
+      },
+      "action_name": "MyIngress.triangle_forward",
+      "action_params": {
+        "port": 2
+      }
+    },
+   
+    {
+      "table": "MyIngress.determine_master_exact",
+      "match": {
+        "hdr.triangle.dst_id": [1]
+      },
+      "action_name": "MyIngress.determine_master",
+      "action_params": {
+        "is_master_b": 0 
+      }
+    },
+
+    {
+      "table": "MyIngress.triangle_query",
+      "match": {
+        "hdr.triangle.dst_id": [1]
+      },
+      "action_name": "MyIngress.triangle_query_forward",
+      "action_params": {
+        "port": 2
+      }
+    }
+  ]
+}
