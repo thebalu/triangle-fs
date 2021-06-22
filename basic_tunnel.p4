@@ -6,7 +6,10 @@
 const bit<16> TYPE_TRIANGLE = 0x1212;
 const bit<16> TYPE_IPV4 = 0x800;
 
+
+// NOTE REGISTER_BIT_WIDTH added here
 #define NUM_KEYS 16
+#define REGISTER_BIT_WIDTH 1
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -114,10 +117,10 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit>(NUM_KEYS) forward_reg;
-    register<bit>(NUM_KEYS) query_reg;
+    register<bit<REGISTER_BIT_WIDTH>>(NUM_KEYS) forward_reg;
+    register<bit<REGISTER_BIT_WIDTH>>(NUM_KEYS) query_reg;
     bit forward_val;
-    bit query_val;
+    bit<1> query_val;
     bit<32> curr_id; 
 
     action drop() {
@@ -192,6 +195,7 @@ control MyIngress(inout headers hdr,
             determine_master;
             drop;
         }
+
         size = 1024;
         default_action = drop();
     }
@@ -232,8 +236,15 @@ control MyIngress(inout headers hdr,
                         mark_to_drop(standard_metadata);
                     }
                 } else if (hdr.triangle.is_query == 1) {
-                    query_reg.write(hdr.triangle.packet_id, 1);
+                    query_reg.write(hdr.triangle.packet_id, (bit<1>) 1);
                     forward_reg.write(hdr.triangle.packet_id, 0);
+                    query_reg.read(query_val, hdr.triangle.packet_id);
+                    if (query_val == 1) {
+                        hdr.triangle.is_new = 23;
+                    }
+                    else {
+                        hdr.triangle.is_new = 22;
+                    }
                     triangle_query.apply();
                 } else if (hdr.triangle.is_delete == 1) {
                     forward_reg.write(hdr.triangle.packet_id, 0);
