@@ -6,10 +6,7 @@
 const bit<16> TYPE_TRIANGLE = 0x1212;
 const bit<16> TYPE_IPV4 = 0x800;
 
-
-// NOTE REGISTER_BIT_WIDTH added here
-#define NUM_KEYS 16
-#define REGISTER_BIT_WIDTH 1
+#define NUM_KEYS 4096
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -31,6 +28,14 @@ header triangleFs_t {
     bit<16> is_new;
     bit<16> is_query;
     bit<16> is_delete;
+    /* Status:
+    0: no status
+    1: packet_id already in use
+    2: query request acknowledged
+    3: delete request acknowledged
+    4: no packet with given id 
+    */
+    bit<16> status;
     bit<32> packet_id;
 }
 
@@ -117,11 +122,10 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<REGISTER_BIT_WIDTH>>(NUM_KEYS) forward_reg;
-    register<bit<REGISTER_BIT_WIDTH>>(NUM_KEYS) query_reg;
-    bit forward_val;
-    bit<1> query_val;
-    bit<32> curr_id; 
+    register<bit<16>>(4096) forward_reg;
+    register<bit<16>>(4096) query_reg;
+    bit<16> forward_val;
+    bit<16> query_val;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -195,7 +199,6 @@ control MyIngress(inout headers hdr,
             determine_master;
             drop;
         }
-
         size = 1024;
         default_action = drop();
     }
@@ -219,35 +222,60 @@ control MyIngress(inout headers hdr,
             } else {
                 // We are on master switch
                 // It is not a control packet
-                if(hdr.triangle.is_delete == 0 && hdr.triangle.is_query == 0) {
-                    if(hdr.triangle.is_new == 1) {
-                        forward_reg.write(hdr.triangle.packet_id, 1);
-                    }
-                    forward_reg.read(forward_val, hdr.triangle.packet_id);
-                    query_reg.read(query_val, hdr.triangle.packet_id);
 
-                    if (query_val == 1) {
-                        // if we are the master switch, forward to host
-                        // otherwise just forward in the cycle
-                        triangle_query.apply();
-                    } else if (forward_val == 1) {
-                        triangle_exact.apply();
+                forward_reg.read(forward_val, hdr.triangle.packet_id);
+                query_reg.read(query_val, hdr.triangle.packet_id); 
+
+                if(hdr.triangle.is_delete == 0 && hdr.triangle.is_query == 0) {
+                    // New packet coming from host
+                    if (hdr.triangle.is_new == 1) {
+                        hdr.triangle.is_new = 0;
+                        // Error: packet_id already in use, return packet with status = 1
+                        if(forward_val == 1) {
+                            hdr.triangle.status = 1;
+                            triangle_query.apply();
+                        // New packet, start forwarding
+                        } else {
+                            forward_reg.write(hdr.triangle.packet_id, 1);
+                            triangle_exact.apply();
+                        }
+                    // Old packet coming from the cycle
                     } else {
-                        mark_to_drop(standard_metadata);
+                        if (query_val == 1) {
+                            query_reg.write(hdr.triangle.packet_id, 0);
+                            forward_reg.write(hdr.triangle.packet_id, 0);
+                            triangle_query.apply();
+                        } else if (forward_val == 1) {
+                            triangle_exact.apply();
+                        } else {
+                            mark_to_drop(standard_metadata);
+                        }
                     }
+                // Control packet - we want to query
                 } else if (hdr.triangle.is_query == 1) {
-                    query_reg.write(hdr.triangle.packet_id, (bit<1>) 1);
-                    forward_reg.write(hdr.triangle.packet_id, 0);
-                    query_reg.read(query_val, hdr.triangle.packet_id);
-                    if (query_val == 1) {
-                        hdr.triangle.is_new = 23;
+                    // Packet not in cycle
+                    if (forward_val == 0) {
+                        hdr.triangle.status = 4;
+                        triangle_query.apply();
+                    } else {
+                        query_reg.write(hdr.triangle.packet_id, 1);
+                        forward_reg.write(hdr.triangle.packet_id, 0);
+                        // Return the packet with status = 2
+                        hdr.triangle.status = 2; 
+                        triangle_query.apply();
                     }
-                    else {
-                        hdr.triangle.is_new = 22;
-                    }
-                    triangle_query.apply();
                 } else if (hdr.triangle.is_delete == 1) {
-                    forward_reg.write(hdr.triangle.packet_id, 0);
+                    if (forward_val == 0) {
+                        hdr.triangle.status = 4;
+                        triangle_query.apply();
+                    } else {
+                        forward_reg.write(hdr.triangle.packet_id, 0);
+                        query_reg.write(hdr.triangle.packet_id, 0);
+
+                        // Return the packet with status = 3
+                        hdr.triangle.status = 3; 
+                        triangle_query.apply();
+                    }
                 }
             }
         } else if (hdr.ipv4.isValid()) {

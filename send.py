@@ -38,7 +38,7 @@ def main():
     if (packet_id is not None):
         print "sending on interface {} to packet_Id {}".format(iface, str(packet_id))
         pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
-        pkt = pkt / Triangle(packet_id=packet_id, dst_id=1, is_new=1, is_query=args.query, is_delete=0) / args.message
+        pkt = pkt / Triangle(packet_id=packet_id, status=0, dst_id=1, is_new=1, is_query=args.query, is_delete=0) / args.message
     else:
         raise 'No packet id given'
         #pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
