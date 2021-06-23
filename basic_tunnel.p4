@@ -221,8 +221,7 @@ control MyIngress(inout headers hdr,
                 triangle_exact.apply();
             } else {
                 // We are on master switch
-                // It is not a control packet
-
+                
                 forward_reg.read(forward_val, hdr.triangle.packet_id);
                 query_reg.read(query_val, hdr.triangle.packet_id); 
 
@@ -266,14 +265,14 @@ control MyIngress(inout headers hdr,
                     }
                 } else if (hdr.triangle.is_delete == 1) {
                     if (forward_val == 0) {
-                        hdr.triangle.status = 4;
+                        hdr.triangle.status = 5;
                         triangle_query.apply();
                     } else {
                         forward_reg.write(hdr.triangle.packet_id, 0);
                         query_reg.write(hdr.triangle.packet_id, 0);
 
-                        // Return the packet with status = 3
-                        hdr.triangle.status = 3; 
+                        // Return the packet with status = 6
+                        hdr.triangle.status = 6; 
                         triangle_query.apply();
                     }
                 }
@@ -303,10 +302,10 @@ control MyEgress(inout headers hdr,
 
 control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
      apply {
-	update_checksum(
-	    hdr.ipv4.isValid(),
+    update_checksum(
+        hdr.ipv4.isValid(),
             { hdr.ipv4.version,
-	      hdr.ipv4.ihl,
+          hdr.ipv4.ihl,
               hdr.ipv4.diffserv,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
