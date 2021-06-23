@@ -44,7 +44,7 @@
       },
       "action_name": "MyIngress.triangle_forward",
       "action_params": {
-        "port": 3
+        "port": 1
       }
     },
    
