@@ -177,6 +177,10 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
+    action multicast() {
+        standard_metadata.mcast_grp = 1;
+    }
+
     // This table is filled so that the master forwards all
     // packets to the host, all others just forward in the cycle
     table triangle_query {
@@ -185,6 +189,7 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             triangle_query_forward;
+            multicast;
             drop;
         }
         size = 1024;
@@ -209,23 +214,16 @@ control MyIngress(inout headers hdr,
         if(hdr.triangle.isValid()) {
         
             determine_master_exact.apply();
-            // if (hdr.triangle.isValid()) {
-                // triangle_exact.apply();
-                // if (meta.is_master == 1) {
-                //     hdr.triangle.is_new = 3; 
-                // } else {
-                //     hdr.triangle.is_new = 4; 
-
-                // }
+           
             if (meta.is_master == 0) {
                 triangle_exact.apply();
             } else {
                 // We are on master switch
-                // It is not a control packet
 
                 forward_reg.read(forward_val, hdr.triangle.packet_id);
                 query_reg.read(query_val, hdr.triangle.packet_id); 
 
+                // It is not a control packet
                 if(hdr.triangle.is_delete == 0 && hdr.triangle.is_query == 0) {
                     // New packet coming from host
                     if (hdr.triangle.is_new == 1) {
@@ -242,8 +240,9 @@ control MyIngress(inout headers hdr,
                     // Old packet coming from the cycle
                     } else {
                         if (query_val == 1) {
+                            // We fulfill the query via multicast, set register to 0
+                            // so that we don't query in next cycle
                             query_reg.write(hdr.triangle.packet_id, 0);
-                            forward_reg.write(hdr.triangle.packet_id, 0);
                             triangle_query.apply();
                         } else if (forward_val == 1) {
                             triangle_exact.apply();
@@ -259,11 +258,11 @@ control MyIngress(inout headers hdr,
                         triangle_query.apply();
                     } else {
                         query_reg.write(hdr.triangle.packet_id, 1);
-                        forward_reg.write(hdr.triangle.packet_id, 0);
                         // Return the packet with status = 2
                         hdr.triangle.status = 2; 
                         triangle_query.apply();
                     }
+                // Control packet - we want to delete
                 } else if (hdr.triangle.is_delete == 1) {
                     if (forward_val == 0) {
                         hdr.triangle.status = 4;

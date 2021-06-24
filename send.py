@@ -29,16 +29,22 @@ def main():
     parser.add_argument('message', type=str, help="The message to include in packet")
     parser.add_argument('--packet_id', type=int, default=None, help='The packet_id to use ')
     parser.add_argument('--query', dest='query', action='store_true', help='Query the packet with given id')
+    parser.add_argument('--delete', dest='delete', action='store_true', help='Delte the packet with given id')
+
     args = parser.parse_args()
 
     # addr = socket.gethostbyname(args.ip_addr)
     packet_id = args.packet_id
     iface = get_if()
 
+    dst_id = 1
+    if args.query == 1 or args.delete == 1:
+        dst_id = 2
+
     if (packet_id is not None):
         print "sending on interface {} to packet_Id {}".format(iface, str(packet_id))
         pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
-        pkt = pkt / Triangle(packet_id=packet_id, status=0, dst_id=1, is_new=1, is_query=args.query, is_delete=0) / args.message
+        pkt = pkt / Triangle(packet_id=packet_id, status=0, dst_id=dst_id, is_new=1, is_query=args.query, is_delete=args.delete) / args.message
     else:
         raise 'No packet id given'
         #pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')

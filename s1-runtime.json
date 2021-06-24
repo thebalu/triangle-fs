@@ -47,11 +47,31 @@
         "port": 2
       }
     },
-   
+    {
+      "table": "MyIngress.triangle_exact",
+      "match": {
+        "hdr.triangle.dst_id": [2]
+      },
+      "action_name": "MyIngress.triangle_forward",
+      "action_params": {
+        "port": 2
+      }
+    },   
+
     {
       "table": "MyIngress.determine_master_exact",
       "match": {
         "hdr.triangle.dst_id": [1]
+      },
+      "action_name": "MyIngress.determine_master",
+      "action_params": {
+        "is_master_b": 1 
+      }
+    },
+    {
+      "table": "MyIngress.determine_master_exact",
+      "match": {
+        "hdr.triangle.dst_id": [2]
       },
       "action_name": "MyIngress.determine_master",
       "action_params": {
@@ -64,10 +84,33 @@
       "match": {
         "hdr.triangle.dst_id": [1]
       },
+      "action_name": "MyIngress.multicast",
+      "action_params": { }
+    },
+ {
+      "table": "MyIngress.triangle_query",
+      "match": {
+        "hdr.triangle.dst_id": [2]
+      },
       "action_name": "MyIngress.triangle_query_forward",
-      "action_params": {
-        "port": 4
-      }
+      "action_params": { 
+	  "port": 4
+	}
+    }
+  ],
+	"multicast_group_entries" : [
+	    {
+	      "multicast_group_id" : 1,
+	      "replicas" : [
+	        {
+	          "egress_port" : 4,
+	          "instance" : 1
+	        },
+	        {
+	          "egress_port" : 2,
+	          "instance" : 1
+	        }
+	      ]
     }
   ]
 }
