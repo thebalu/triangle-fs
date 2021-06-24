@@ -8,7 +8,7 @@ The goal of our project is to create a proof of concept in-network data store, t
 - P4
 - Python
 
- To read more about how to obtain the required software please visit the [offical P4 tutorial github page] (https://github.com/p4lang/tutorials#obtaining-required-software)
+ To read more about how to obtain the required software please visit https://github.com/p4lang/tutorials#obtaining-required-software
  
  ## Getting started
  
